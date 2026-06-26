@@ -39,6 +39,8 @@ export class ParadeScene {
   private cameraKick = 0;
   private state: GameState;
   private resizeObserver: ResizeObserver;
+  private abortController = new AbortController();
+  private offListeners: Array<() => void> = [];
 
   constructor(
     private canvas: HTMLCanvasElement,
@@ -90,41 +92,45 @@ export class ParadeScene {
 
   destroy(): void {
     cancelAnimationFrame(this.animationFrame);
+    this.abortController.abort();
+    this.offListeners.forEach((off) => off());
+    this.offListeners = [];
     this.resizeObserver.disconnect();
     this.renderer.dispose();
   }
 
   private bindEvents(): void {
-    this.canvas.addEventListener("pointerdown", (event) => this.onPointerDown(event));
-    this.canvas.addEventListener("pointermove", (event) => this.onPointerMove(event));
-    this.canvas.addEventListener("pointerup", (event) => this.onPointerUp(event));
-    this.canvas.addEventListener("pointercancel", (event) => this.onPointerUp(event));
-    window.addEventListener("blur", () => this.cancelDrag());
+    const listenerOptions = { signal: this.abortController.signal };
+    this.canvas.addEventListener("pointerdown", (event) => this.onPointerDown(event), listenerOptions);
+    this.canvas.addEventListener("pointermove", (event) => this.onPointerMove(event), listenerOptions);
+    this.canvas.addEventListener("pointerup", (event) => this.onPointerUp(event), listenerOptions);
+    this.canvas.addEventListener("pointercancel", (event) => this.onPointerUp(event), listenerOptions);
+    window.addEventListener("blur", () => this.cancelDrag(), listenerOptions);
 
-    this.bus.on("statechange", (state) => {
+    this.offListeners.push(this.bus.on("statechange", (state) => {
       this.state = state;
       this.syncState(state);
-    });
-    this.bus.on("merge", ({ padId }) => {
+    }));
+    this.offListeners.push(this.bus.on("merge", ({ padId }) => {
       const position = PAD_POSITIONS[padId];
       this.burst(position.x, position.y + 0.2, RARITIES.rainbow.css, 20);
       this.cameraKick = this.state.settings.reducedMotion ? 0 : 0.16;
-    });
-    this.bus.on("rosterexpand", ({ unlockedPads }) => {
+    }));
+    this.offListeners.push(this.bus.on("rosterexpand", ({ unlockedPads }) => {
       const firstNewPad = Math.max(0, unlockedPads - 2);
       for (let id = firstNewPad; id < unlockedPads; id += 1) {
         const position = PAD_POSITIONS[id];
         this.burst(position.x, position.y, "#9dffea", 10);
       }
-    });
-    this.bus.on("discover", ({ instance }) => {
+    }));
+    this.offListeners.push(this.bus.on("discover", ({ instance }) => {
       const color = RARITIES[instance.rarity].css;
       this.burst(0, 0.2, color, 12);
-    });
-    this.bus.on("income", ({ padId }) => {
+    }));
+    this.offListeners.push(this.bus.on("income", ({ padId }) => {
       const position = PAD_POSITIONS[padId];
       this.floatStar(position.x, position.y + 0.65);
-    });
+    }));
   }
 
   private createPads(): void {

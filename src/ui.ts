@@ -18,6 +18,9 @@ export class GameUI {
   private celebration: HTMLElement;
   private currentState: GameState;
   private celebrationTimer = 0;
+  private refreshTimer = 0;
+  private offListeners: Array<() => void> = [];
+  private abortController = new AbortController();
 
   constructor(
     private root: HTMLElement,
@@ -40,7 +43,7 @@ export class GameUI {
     this.celebration = this.require("#celebration");
     this.bind();
     this.render(this.currentState);
-    window.setInterval(() => this.refreshRing(), 250);
+    this.refreshTimer = window.setInterval(() => this.refreshRing(), 250);
   }
 
   hideLoading(): void {
@@ -56,38 +59,47 @@ export class GameUI {
   }
 
   private bind(): void {
+    const listenerOptions = { signal: this.abortController.signal };
     this.ringButton.addEventListener("click", () => {
       this.audio.unlock();
       this.game.ring();
-    });
+    }, listenerOptions);
     this.soundButton.addEventListener("click", () => {
       const enabled = !this.currentState.settings.soundEnabled;
       this.game.setSound(enabled);
       this.audio.setEnabled(enabled);
-    });
+    }, listenerOptions);
     this.require<HTMLButtonElement>("#collection-button").addEventListener("click", () => {
       this.renderCollection();
       this.collectionDialog.showModal();
-    });
-    this.require<HTMLButtonElement>("#collection-close").addEventListener("click", () => this.collectionDialog.close());
+    }, listenerOptions);
+    this.require<HTMLButtonElement>("#collection-close").addEventListener("click", () => this.collectionDialog.close(), listenerOptions);
     this.collectionDialog.addEventListener("click", (event) => {
       if (event.target === this.collectionDialog) this.collectionDialog.close();
-    });
+    }, listenerOptions);
     this.require<HTMLButtonElement>("#tutorial-ok").addEventListener("click", () => {
       this.game.dismissTutorial();
       this.tutorial.classList.add("tutorial--hidden");
-    });
+    }, listenerOptions);
 
-    this.bus.on("statechange", (state) => this.render(state));
-    this.bus.on("message", (message) => this.showCelebration(message.title, message.detail, message.tone));
-    this.bus.on("discover", ({ instance, total }) => {
+    this.offListeners.push(this.bus.on("statechange", (state) => this.render(state)));
+    this.offListeners.push(this.bus.on("message", (message) => this.showCelebration(message.title, message.detail, message.tone)));
+    this.offListeners.push(this.bus.on("discover", ({ instance, total }) => {
       if (total <= 1) return;
       this.showCelebration(
         `NEW ${RARITIES[instance.rarity].label.toUpperCase()}!`,
         `${CHARACTER_NAMES[instance.type]} joined the book!`,
         instance.rarity === "rainbow" ? "rainbow" : instance.rarity === "golden" ? "gold" : "pink",
       );
-    });
+    }));
+  }
+
+  destroy(): void {
+    this.abortController.abort();
+    this.offListeners.forEach((off) => off());
+    this.offListeners = [];
+    window.clearInterval(this.refreshTimer);
+    window.clearTimeout(this.celebrationTimer);
   }
 
   private render(state: GameState): void {

@@ -120,14 +120,16 @@ export class GameController {
     if (now - this.state.lastIncomeAt < GAME_CONFIG.incomeIntervalMs) return;
     const cycles = Math.min(3, Math.floor((now - this.state.lastIncomeAt) / GAME_CONFIG.incomeIntervalMs));
     this.state.lastIncomeAt += cycles * GAME_CONFIG.incomeIntervalMs;
+    let totalAwarded = 0;
     for (const pad of this.state.pads) {
       const instance = pad.occupantId ? this.getInstance(pad.occupantId) : null;
       if (!instance) continue;
       const amount = RARITIES[instance.rarity].income * cycles;
       this.state.stars += amount;
+      totalAwarded += amount;
       this.bus.emit("income", { amount, padId: pad.id });
     }
-    this.bus.emit("sound", { name: "star" });
+    if (totalAwarded > 0) this.bus.emit("sound", { name: "star" });
     this.emitState();
   }
 

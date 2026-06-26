@@ -13,9 +13,11 @@ const SOUND_NOTES = {
 export class AudioManager {
   private context: AudioContext | null = null;
   private enabled = true;
+  private offSound: () => void;
+  private lastPlayedAt = new Map<keyof typeof SOUND_NOTES, number>();
 
   constructor(bus: EventBus) {
-    bus.on("sound", ({ name }) => this.play(name));
+    this.offSound = bus.on("sound", ({ name }) => this.play(name));
   }
 
   setEnabled(enabled: boolean): void {
@@ -27,8 +29,19 @@ export class AudioManager {
     if (this.context.state === "suspended") void this.context.resume();
   }
 
+  destroy(): void {
+    this.offSound();
+    if (this.context) void this.context.close();
+    this.context = null;
+  }
+
   private play(name: keyof typeof SOUND_NOTES): void {
     if (!this.enabled) return;
+    const nowMs = performance.now();
+    const cooldown = name === "star" ? 1_200 : name === "error" ? 250 : 70;
+    if (nowMs - (this.lastPlayedAt.get(name) ?? 0) < cooldown) return;
+    this.lastPlayedAt.set(name, nowMs);
+
     this.unlock();
     if (!this.context) return;
 

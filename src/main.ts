@@ -42,4 +42,19 @@ void parade.load()
     ui.showLoadError();
   });
 
-window.addEventListener("beforeunload", () => parade.destroy());
+let disposed = false;
+const cleanup = () => {
+  if (disposed) return;
+  disposed = true;
+  ui.destroy();
+  audio.destroy();
+  parade.destroy();
+};
+
+window.addEventListener("beforeunload", cleanup);
+
+const hot = (import.meta as ImportMeta & { hot?: { dispose(callback: () => void): void } }).hot;
+hot?.dispose(() => {
+  window.removeEventListener("beforeunload", cleanup);
+  cleanup();
+});
