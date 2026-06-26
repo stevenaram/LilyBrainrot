@@ -120,6 +120,19 @@ try {
   assert.equal(await page.getByRole("button", { name: "Ring the bell to call a brain rot" }).isVisible(), true);
   await page.screenshot({ path: `${outputDir}/mobile-landscape.png` });
 
+  await page.setViewportSize({ width: 667, height: 320 });
+  await page.waitForTimeout(300);
+  const shortLandscapeRing = await page.locator("#ring-button").boundingBox();
+  const shortLandscapeStage = await page.locator(".game-viewport").boundingBox();
+  assert.ok(shortLandscapeRing, "ring button should render in short phone landscape");
+  assert.ok(shortLandscapeStage, "stage should render in short phone landscape");
+  assert.ok(shortLandscapeRing.y >= shortLandscapeStage.y, "ring button should not crop above the stage");
+  assert.ok(
+    shortLandscapeRing.y + shortLandscapeRing.height <= shortLandscapeStage.y + shortLandscapeStage.height,
+    "ring button should not crop below the stage",
+  );
+  await page.screenshot({ path: `${outputDir}/phone-short-landscape.png` });
+
   await page.setViewportSize({ width: 390, height: 844 });
   await page.waitForTimeout(300);
   assert.equal(await page.locator(".portrait-message").isVisible(), true);
@@ -136,6 +149,7 @@ try {
       "collection-book.png",
       "expanded-roster.png",
       "mobile-landscape.png",
+      "phone-short-landscape.png",
       "mobile-portrait.png",
     ].map((name) => `${outputDir}/${name}`),
   }, null, 2));

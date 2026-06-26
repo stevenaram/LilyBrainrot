@@ -13,6 +13,18 @@
   --gold: #ffd43d;
   --brown: #683218;
   --cream: #fff9dd;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
+  --stage-max-width: calc(100vw - var(--safe-left) - var(--safe-right));
+  --stage-max-height: calc(100svh - var(--safe-top) - var(--safe-bottom));
+}
+
+@supports (height: 100dvh) {
+  :root {
+    --stage-max-height: calc(100dvh - var(--safe-top) - var(--safe-bottom));
+  }
 }
 
 * {
@@ -47,13 +59,19 @@ button:focus-visible {
 #app {
   display: grid;
   place-items: center;
+  padding:
+    var(--safe-top)
+    var(--safe-right)
+    var(--safe-bottom)
+    var(--safe-left);
   background: radial-gradient(circle at 50% 20%, #ddf7ff 0, #75d6ff 45%, #37a6df 100%);
 }
 
 .game-viewport {
   position: relative;
-  width: min(100vw, calc(100vh * 16 / 9));
-  height: min(100vh, calc(100vw * 9 / 16));
+  width: min(var(--stage-max-width), calc(var(--stage-max-height) * 16 / 9));
+  height: min(var(--stage-max-height), calc(var(--stage-max-width) * 9 / 16));
+  container-type: size;
   overflow: hidden;
   background: #9fe3ff;
   box-shadow: 0 0 70px rgb(21 106 151 / 35%);
@@ -102,12 +120,12 @@ button:focus-visible {
   border-radius: 999px;
   background: linear-gradient(#fffbed, #ffd980);
   box-shadow:
-    0 .55vw 0 #d68d25,
-    0 .8vw 1.3vw rgb(104 55 18 / 30%),
-    inset 0 0 0 .24vw #f0b840;
+    0 .55cqw 0 #d68d25,
+    0 .8cqw 1.3cqw rgb(104 55 18 / 30%),
+    inset 0 0 0 .24cqw #f0b840;
   color: var(--brown);
   font-family: "Fredoka", sans-serif;
-  font-size: clamp(22px, 3vw, 58px);
+  font-size: clamp(20px, 3cqw, 58px);
   font-weight: 700;
   line-height: 1;
 }
@@ -124,7 +142,7 @@ button:focus-visible {
   box-shadow: 0 .3vw 0 #4f2095, 0 .5vw .8vw rgb(63 27 105 / 25%);
   color: #fff;
   font-family: "Fredoka", sans-serif;
-  font-size: clamp(11px, 1.25vw, 23px);
+  font-size: clamp(10px, 1.25cqw, 23px);
   font-weight: 700;
   text-align: center;
   text-shadow: 0 .1em 0 #4f2095;
@@ -154,7 +172,7 @@ button:focus-visible {
   font-weight: 700;
   line-height: .72;
   letter-spacing: -.045em;
-  filter: drop-shadow(0 .5vw 0 rgb(96 38 108 / 28%));
+  filter: drop-shadow(0 .5cqw 0 rgb(96 38 108 / 28%));
 }
 
 .game-title span,
@@ -170,19 +188,19 @@ button:focus-visible {
 
 .game-title span {
   color: #ff4aa5;
-  font-size: clamp(28px, 4.5vw, 84px);
+  font-size: clamp(24px, 4.5cqw, 84px);
   z-index: 3;
 }
 
 .game-title b {
   color: #8f4be0;
-  font-size: clamp(31px, 5.2vw, 96px);
+  font-size: clamp(28px, 5.2cqw, 96px);
   z-index: 2;
 }
 
 .game-title em {
   color: #ffb52d;
-  font-size: clamp(24px, 3.7vw, 70px);
+  font-size: clamp(21px, 3.7cqw, 70px);
   z-index: 3;
 }
 
@@ -192,7 +210,7 @@ button:focus-visible {
   right: 1.6%;
   display: flex;
   align-items: flex-start;
-  gap: .7vw;
+  gap: .7cqw;
 }
 
 .icon-button,
@@ -200,19 +218,19 @@ button:focus-visible {
   border: clamp(3px, .3vw, 5px) solid #fff;
   color: #fff;
   background: linear-gradient(#a769ff, #6f32d4);
-  box-shadow: 0 .45vw 0 #4f1f9b, 0 .7vw 1vw rgb(49 21 94 / 25%);
+  box-shadow: 0 .45cqw 0 #4f1f9b, 0 .7cqw 1cqw rgb(49 21 94 / 25%);
 }
 
 .icon-button {
-  width: clamp(52px, 5.8vw, 94px);
+  width: clamp(46px, 5.8cqw, 94px);
   aspect-ratio: 1;
   border-radius: 28%;
-  font-size: clamp(22px, 2.5vw, 42px);
+  font-size: clamp(20px, 2.5cqw, 42px);
 }
 
 .collection-button {
-  min-width: clamp(80px, 8.4vw, 142px);
-  padding: .28vw .5vw .55vw;
+  min-width: clamp(72px, 8.4cqw, 142px);
+  padding: .28cqw .5cqw .55cqw;
   border-radius: 21%;
   display: grid;
   justify-items: center;
@@ -220,7 +238,7 @@ button:focus-visible {
 }
 
 .collection-button span {
-  font-size: clamp(28px, 3.7vw, 64px);
+  font-size: clamp(24px, 3.7cqw, 64px);
 }
 
 .collection-button strong {
@@ -229,16 +247,16 @@ button:focus-visible {
   border-radius: 999px;
   background: #fff;
   color: #65311d;
-  font-size: clamp(13px, 1.4vw, 26px);
+  font-size: clamp(12px, 1.4cqw, 26px);
   box-shadow: 0 .15em 0 #d4b5ef;
 }
 
 .ring-button {
   position: absolute;
   left: 50%;
-  bottom: 2.2%;
-  width: clamp(250px, 30%, 520px);
-  min-height: clamp(76px, 14%, 142px);
+  bottom: max(2.2%, var(--safe-bottom));
+  width: clamp(210px, 31cqw, 520px);
+  min-height: clamp(62px, 14cqh, 142px);
   transform: translateX(-50%);
   display: grid;
   grid-template-columns: auto 1fr;
@@ -249,10 +267,10 @@ button:focus-visible {
   border-radius: 32% / 50%;
   background: linear-gradient(#ff69bb 0 18%, #ed328f 21% 78%, #cb166f 82%);
   box-shadow:
-    0 .8vw 0 #1678cf,
-    0 1.1vw 0 #55bbff,
-    0 1.4vw 2vw rgb(41 66 127 / 35%),
-    inset 0 0 0 .3vw #f9b3d9;
+    0 .8cqw 0 #1678cf,
+    0 1.1cqw 0 #55bbff,
+    0 1.4cqw 2cqw rgb(41 66 127 / 35%),
+    inset 0 0 0 .3cqw #f9b3d9;
   color: #fff;
   font-family: "Fredoka", sans-serif;
   text-shadow: 0 .12em 0 #a31262;
@@ -260,7 +278,7 @@ button:focus-visible {
 }
 
 .ring-button:not(:disabled):active {
-  transform: translateX(-50%) translateY(.45vw) scale(.97);
+  transform: translateX(-50%) translateY(.45cqw) scale(.97);
 }
 
 .ring-button:disabled {
@@ -269,12 +287,12 @@ button:focus-visible {
 
 .ring-button__bell {
   grid-row: 1 / 3;
-  font-size: clamp(40px, 5vw, 86px);
+  font-size: clamp(34px, 5cqw, 86px);
   filter: drop-shadow(0 .08em 0 #a96b00);
 }
 
 .ring-button strong {
-  font-size: clamp(31px, 4.2vw, 76px);
+  font-size: clamp(27px, 4.2cqw, 76px);
   line-height: .9;
   letter-spacing: -.025em;
 }
@@ -286,7 +304,7 @@ button:focus-visible {
   border: .18em solid #fff;
   border-radius: 999px;
   background: var(--purple);
-  font-size: clamp(14px, 1.6vw, 30px);
+  font-size: clamp(12px, 1.6cqw, 30px);
   line-height: 1.1;
 }
 
@@ -294,7 +312,7 @@ button:focus-visible {
   position: absolute;
   left: 50%;
   bottom: 20%;
-  width: min(420px, 42%);
+  width: min(420px, 48cqw);
   transform: translateX(-50%);
   display: grid;
   justify-items: center;
@@ -303,10 +321,10 @@ button:focus-visible {
   border: clamp(3px, .3vw, 5px) solid #fff;
   border-radius: clamp(22px, 2vw, 34px);
   background: rgb(255 249 221 / 96%);
-  box-shadow: 0 .7vw 0 #df8a38, 0 1vw 2vw rgb(77 40 50 / 30%);
+  box-shadow: 0 .7cqw 0 #df8a38, 0 1cqw 2cqw rgb(77 40 50 / 30%);
   color: #5e2e45;
   text-align: center;
-  font-size: clamp(12px, 1.25vw, 22px);
+  font-size: clamp(11px, 1.25cqw, 22px);
   transition: opacity .2s ease, transform .2s ease;
 }
 
@@ -623,20 +641,101 @@ button:focus-visible {
   }
 }
 
-@media (max-height: 540px) {
+@media (orientation: landscape) and (max-height: 460px) {
+  .game-title {
+    top: 1.4%;
+    width: 29%;
+  }
+
+  .star-counter {
+    top: 1.4%;
+    left: 1.3%;
+    height: 10.5%;
+    min-width: 14%;
+    font-size: clamp(16px, 2.55cqw, 34px);
+  }
+
+  .roster-count {
+    top: 12.5%;
+    left: 2.8%;
+    font-size: clamp(8px, 1.05cqw, 15px);
+  }
+
+  .top-actions {
+    top: 1.3%;
+    right: 1.2%;
+    gap: .45cqw;
+  }
+
+  .icon-button {
+    width: clamp(38px, 5.2cqw, 54px);
+  }
+
+  .collection-button {
+    min-width: clamp(58px, 7.8cqw, 82px);
+  }
+
+  .collection-button span {
+    font-size: clamp(19px, 3.1cqw, 32px);
+  }
+
+  .collection-button strong {
+    font-size: clamp(9px, 1.2cqw, 14px);
+  }
+
+  .ring-button {
+    bottom: max(3.1%, var(--safe-bottom));
+    width: clamp(178px, 29cqw, 300px);
+    min-height: clamp(50px, 13.2cqh, 66px);
+    padding: .55% 2.2% .45% 1.6%;
+    border-width: 3px;
+  }
+
+  .ring-button__bell {
+    font-size: clamp(28px, 4.2cqw, 44px);
+  }
+
+  .ring-button strong {
+    font-size: clamp(24px, 3.7cqw, 44px);
+  }
+
+  .ring-button small {
+    font-size: clamp(10px, 1.35cqw, 15px);
+  }
+
   .tutorial {
-    bottom: 22%;
-    width: 36%;
+    bottom: 18%;
+    width: min(350px, 42cqw);
     padding: 8px 12px;
+    font-size: clamp(10px, 1.05cqw, 14px);
   }
 
   .tutorial__gesture {
-    font-size: 1.7em;
+    font-size: 1.45em;
   }
 
   .small-button {
-    min-height: 36px;
+    min-height: 34px;
     padding: .35em 1em;
+  }
+}
+
+@media (orientation: landscape) and (max-height: 360px) {
+  .game-title {
+    top: 2%;
+    width: 25%;
+  }
+
+  .tutorial {
+    bottom: 17%;
+    width: min(310px, 38cqw);
+    gap: .2em;
+    padding: 6px 10px;
+  }
+
+  .ring-button {
+    width: clamp(168px, 27cqw, 260px);
+    min-height: 48px;
   }
 }
 
