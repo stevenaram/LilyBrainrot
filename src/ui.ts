@@ -1,4 +1,4 @@
-import { CHARACTER_NAMES, collectionKey, GAME_CONFIG, RARITIES, RARITY_ORDER } from "./config";
+import { CHARACTER_NAMES, COLLECTION_TOTAL, collectionKey, GAME_CONFIG, RARITIES, RARITY_ORDER } from "./config";
 import type { AudioManager } from "./audio";
 import type { EventBus } from "./events";
 import type { GameController } from "./game";
@@ -7,6 +7,7 @@ import type { BrainrotType, GameState } from "./types";
 export class GameUI {
   private stars: HTMLElement;
   private collectionCount: HTMLElement;
+  private rosterCount: HTMLElement;
   private ringButton: HTMLButtonElement;
   private ringLabel: HTMLElement;
   private ringCost: HTMLElement;
@@ -28,6 +29,7 @@ export class GameUI {
     this.root.insertAdjacentHTML("beforeend", this.template());
     this.stars = this.require("#star-value");
     this.collectionCount = this.require("#collection-count");
+    this.rosterCount = this.require("#roster-count");
     this.ringButton = this.require<HTMLButtonElement>("#ring-button");
     this.ringLabel = this.require("#ring-label");
     this.ringCost = this.require("#ring-cost");
@@ -91,7 +93,8 @@ export class GameUI {
   private render(state: GameState): void {
     this.currentState = state;
     this.stars.textContent = state.stars.toLocaleString();
-    this.collectionCount.textContent = `${state.discovered.length} / 12`;
+    this.collectionCount.textContent = `${state.discovered.length} / ${COLLECTION_TOTAL}`;
+    this.rosterCount.textContent = `${state.unlockedPads} SPOTS`;
     this.soundButton.textContent = state.settings.soundEnabled ? "🔊" : "🔇";
     this.soundButton.setAttribute("aria-label", state.settings.soundEnabled ? "Turn sound off" : "Turn sound on");
     this.audio.setEnabled(state.settings.soundEnabled);
@@ -121,7 +124,7 @@ export class GameUI {
       RARITY_ORDER.forEach((rarity) => {
         const found = this.currentState.discovered.includes(collectionKey(type, rarity));
         cards.push(`
-          <div class="collection-card ${found ? "collection-card--found" : ""}" style="--rarity:${RARITIES[rarity].css}">
+          <div class="collection-card ${found ? "collection-card--found" : ""}" data-rarity="${rarity}" style="--rarity:${RARITIES[rarity].css}">
             <div class="collection-card__image">
               ${found ? `<img src="${new URL(`../assets/brainrot${type}.png`, import.meta.url).href}" alt="">` : `<span>?</span>`}
             </div>
@@ -150,6 +153,7 @@ export class GameUI {
           <span class="star-icon">★</span>
           <strong id="star-value">50</strong>
         </div>
+        <div id="roster-count" class="roster-count">6 SPOTS</div>
 
         <h1 class="game-title" aria-label="Lily's Brainrot Parade">
           <span>Lily's</span>
@@ -161,7 +165,7 @@ export class GameUI {
           <button id="sound-button" class="icon-button" aria-label="Turn sound off">🔊</button>
           <button id="collection-button" class="collection-button" aria-label="Open collection book">
             <span aria-hidden="true">📖</span>
-            <strong id="collection-count">0 / 12</strong>
+            <strong id="collection-count">0 / ${COLLECTION_TOTAL}</strong>
           </button>
         </div>
 
@@ -175,7 +179,7 @@ export class GameUI {
       <section id="tutorial" class="tutorial" aria-label="How to play">
         <div class="tutorial__gesture">👆 <span>→</span> ✨</div>
         <strong>Tap a friend. Drag to a circle!</strong>
-        <span>Match two alike to make a rare one.</span>
+        <span>Match any two of the same character to upgrade!</span>
         <button id="tutorial-ok" class="small-button">LET'S PLAY!</button>
       </section>
 
@@ -185,7 +189,7 @@ export class GameUI {
         <header>
           <div>
             <h2>Brainrot Book</h2>
-            <p>Find all 12 colorful friends!</p>
+            <p>Find all ${COLLECTION_TOTAL} colorful friends!</p>
           </div>
           <button id="collection-close" class="dialog-close" aria-label="Close collection book">×</button>
         </header>

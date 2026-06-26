@@ -1,4 +1,4 @@
-import { collectionKey, GAME_CONFIG, nextRarity, RARITIES, rollRarity, rollType } from "./config";
+import { COLLECTION_TOTAL, collectionKey, GAME_CONFIG, mergeRarity, RARITIES, rollRarity, rollType } from "./config";
 import type { EventBus } from "./events";
 import { saveState } from "./persistence";
 import type { BrainrotInstance, GameState } from "./types";
@@ -61,7 +61,7 @@ export class GameController {
   place(id: string, padId: number): boolean {
     const instance = this.getInstance(id);
     const targetPad = this.state.pads[padId];
-    if (!instance || !targetPad) return false;
+    if (!instance || !targetPad || padId >= this.state.unlockedPads) return false;
 
     const originPad = instance.padId === null ? null : this.state.pads[instance.padId];
     const target = targetPad.occupantId ? this.getInstance(targetPad.occupantId) : null;
@@ -73,11 +73,12 @@ export class GameController {
       instance.status = "placed";
       this.bus.emit("place", { instance, padId });
       this.bus.emit("sound", { name: "place" });
+      this.expandRosterIfFull();
       this.emitState();
       return true;
     }
 
-    if (target.type === instance.type && target.rarity === instance.rarity) {
+    if (target.type === instance.type) {
       return this.merge(instance, target, targetPad.id, originPad?.id ?? null);
     }
 
@@ -98,14 +99,14 @@ export class GameController {
   autoPlace(id: string): void {
     const instance = this.getInstance(id);
     if (!instance || instance.status !== "dragging") return;
-    const empty = this.state.pads.find((pad) => pad.occupantId === null);
+    const empty = this.state.pads.slice(0, this.state.unlockedPads).find((pad) => pad.occupantId === null);
     if (empty) {
       this.place(id, empty.id);
       return;
     }
-    const match = this.state.pads.find((pad) => {
+    const match = this.state.pads.slice(0, this.state.unlockedPads).find((pad) => {
       const occupant = pad.occupantId ? this.getInstance(pad.occupantId) : null;
-      return occupant?.type === instance.type && occupant.rarity === instance.rarity;
+      return occupant?.type === instance.type;
     });
     if (match) {
       this.place(id, match.id);
@@ -141,9 +142,9 @@ export class GameController {
   }
 
   private merge(first: BrainrotInstance, second: BrainrotInstance, padId: number, originPadId: number | null): boolean {
-    const upgraded = nextRarity(first.rarity);
+    const upgraded = mergeRarity(first.rarity, second.rarity);
     if (!upgraded) {
-      this.bus.emit("message", { title: "MAX RAINBOW!", detail: "This brain rot is already super rare!", tone: "rainbow" });
+      this.bus.emit("message", { title: "MAX COSMIC!", detail: "This brain rot is already the rarest!", tone: "rainbow" });
       this.bus.emit("sound", { name: "error" });
       first.status = first.padId === null ? "walking" : "placed";
       this.emitState();
@@ -169,9 +170,10 @@ export class GameController {
     this.bus.emit("sound", { name: "merge" });
     this.bus.emit("message", {
       title: `${RARITIES[upgraded].label.toUpperCase()}!`,
-      detail: "Two friends became one super friend!",
+      detail: "Matching characters always upgrade the better one!",
       tone: upgraded === "golden" ? "gold" : upgraded === "rainbow" ? "rainbow" : "pink",
     });
+    this.expandRosterIfFull();
     this.emitState();
     return true;
   }
@@ -182,9 +184,25 @@ export class GameController {
     this.state.discovered.push(key);
     this.bus.emit("discover", { instance, total: this.state.discovered.length });
     this.bus.emit("sound", { name: "discover" });
-    if (this.state.discovered.length === 12) {
-      this.bus.emit("message", { title: "ALL 12 FOUND!", detail: "The whole parade is here!", tone: "rainbow" });
+    if (this.state.discovered.length === COLLECTION_TOTAL) {
+      this.bus.emit("message", { title: `ALL ${COLLECTION_TOTAL} FOUND!`, detail: "The whole parade is here!", tone: "rainbow" });
     }
+  }
+
+  private expandRosterIfFull(): void {
+    if (this.state.unlockedPads >= GAME_CONFIG.maxPads) return;
+    const activePads = this.state.pads.slice(0, this.state.unlockedPads);
+    if (!activePads.every((pad) => pad.occupantId !== null)) return;
+    this.state.unlockedPads = Math.min(
+      GAME_CONFIG.maxPads,
+      this.state.unlockedPads + GAME_CONFIG.padUnlockStep,
+    );
+    this.bus.emit("rosterexpand", { unlockedPads: this.state.unlockedPads });
+    this.bus.emit("message", {
+      title: "+2 NEW SPOTS!",
+      detail: `Your parade can now hold ${this.state.unlockedPads} friends!`,
+      tone: "rainbow",
+    });
   }
 
   private getInstance(id: string): BrainrotInstance | undefined {
@@ -195,6 +213,12 @@ export class GameController {
     const validIds = new Set(this.state.instances.map((item) => item.id));
     for (const pad of this.state.pads) {
       if (pad.occupantId && !validIds.has(pad.occupantId)) pad.occupantId = null;
+    }
+    while (
+      this.state.unlockedPads < GAME_CONFIG.maxPads &&
+      this.state.pads.slice(0, this.state.unlockedPads).every((pad) => pad.occupantId !== null)
+    ) {
+      this.state.unlockedPads += GAME_CONFIG.padUnlockStep;
     }
   }
 

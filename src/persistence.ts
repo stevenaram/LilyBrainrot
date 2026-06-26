@@ -2,7 +2,7 @@ import { GAME_CONFIG } from "./config";
 import type { GameState, PlacementPad } from "./types";
 
 function defaultPads(): PlacementPad[] {
-  return Array.from({ length: 6 }, (_, id) => ({ id, occupantId: null }));
+  return Array.from({ length: GAME_CONFIG.maxPads }, (_, id) => ({ id, occupantId: null }));
 }
 
 export function createDefaultState(reducedMotion: boolean): GameState {
@@ -11,6 +11,7 @@ export function createDefaultState(reducedMotion: boolean): GameState {
     stars: GAME_CONFIG.startingStars,
     instances: [],
     pads: defaultPads(),
+    unlockedPads: GAME_CONFIG.startingPads,
     discovered: [],
     settings: { soundEnabled: true, reducedMotion },
     tutorialSeen: false,
@@ -31,7 +32,7 @@ export function loadState(reducedMotion: boolean): GameState {
     const validInstances = parsed.instances.filter((item) =>
       item &&
       [1, 2, 3].includes(item.type) &&
-      ["classic", "neon", "golden", "rainbow"].includes(item.rarity) &&
+      ["classic", "bubblegum", "neon", "ocean", "golden", "rainbow", "cosmic"].includes(item.rarity) &&
       typeof item.id === "string"
     );
     const validIds = new Set(validInstances.map((item) => item.id));
@@ -41,6 +42,16 @@ export function loadState(reducedMotion: boolean): GameState {
         ? parsed.pads[pad.id].occupantId
         : null,
     }));
+
+    const highestOccupiedPad = pads.reduce((highest, pad) => pad.occupantId ? Math.max(highest, pad.id) : highest, -1);
+    const migratedUnlockedPads = Math.min(
+      GAME_CONFIG.maxPads,
+      Math.max(
+        GAME_CONFIG.startingPads,
+        Number(parsed.unlockedPads) || 0,
+        Math.ceil((highestOccupiedPad + 1) / GAME_CONFIG.padUnlockStep) * GAME_CONFIG.padUnlockStep,
+      ),
+    );
 
     return {
       ...createDefaultState(reducedMotion),
@@ -52,6 +63,7 @@ export function loadState(reducedMotion: boolean): GameState {
         status: item.padId === null ? "walking" : "placed",
       })),
       pads,
+      unlockedPads: migratedUnlockedPads,
       discovered: Array.isArray(parsed.discovered) ? [...new Set(parsed.discovered.filter((key) => typeof key === "string"))] : [],
       settings: {
         soundEnabled: parsed.settings?.soundEnabled !== false,

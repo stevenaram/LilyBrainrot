@@ -112,6 +112,24 @@ button:focus-visible {
   line-height: 1;
 }
 
+.roster-count {
+  position: absolute;
+  top: 13.7%;
+  left: 3.7%;
+  min-width: 11%;
+  padding: .32em .8em;
+  border: clamp(2px, .22vw, 4px) solid #fff;
+  border-radius: 999px;
+  background: linear-gradient(#a968ff, #7136d6);
+  box-shadow: 0 .3vw 0 #4f2095, 0 .5vw .8vw rgb(63 27 105 / 25%);
+  color: #fff;
+  font-family: "Fredoka", sans-serif;
+  font-size: clamp(11px, 1.25vw, 23px);
+  font-weight: 700;
+  text-align: center;
+  text-shadow: 0 .1em 0 #4f2095;
+}
+
 .star-icon {
   display: grid;
   place-items: center;
@@ -475,6 +493,30 @@ button:focus-visible {
   width: 100%;
   height: 100%;
   object-fit: contain;
+}
+
+.collection-card[data-rarity="bubblegum"] img {
+  filter: saturate(1.35) hue-rotate(315deg) brightness(1.08);
+}
+
+.collection-card[data-rarity="neon"] img {
+  filter: saturate(1.8) hue-rotate(120deg) brightness(1.18);
+}
+
+.collection-card[data-rarity="ocean"] img {
+  filter: saturate(1.45) hue-rotate(165deg) brightness(1.02);
+}
+
+.collection-card[data-rarity="golden"] img {
+  filter: sepia(.8) saturate(2.1) hue-rotate(350deg) brightness(1.1);
+}
+
+.collection-card[data-rarity="rainbow"] img {
+  filter: saturate(1.8) hue-rotate(245deg) brightness(1.13);
+}
+
+.collection-card[data-rarity="cosmic"] img {
+  filter: saturate(1.6) hue-rotate(205deg) brightness(.82) contrast(1.15);
 }
 
 .collection-card__image span {

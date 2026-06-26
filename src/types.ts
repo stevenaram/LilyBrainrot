@@ -1,5 +1,5 @@
 export type BrainrotType = 1 | 2 | 3;
-export type RarityTier = "classic" | "neon" | "golden" | "rainbow";
+export type RarityTier = "classic" | "bubblegum" | "neon" | "ocean" | "golden" | "rainbow" | "cosmic";
 
 export interface BrainrotInstance {
   id: string;
@@ -31,6 +31,7 @@ export interface GameState {
   stars: number;
   instances: BrainrotInstance[];
   pads: PlacementPad[];
+  unlockedPads: number;
   discovered: string[];
   settings: GameSettings;
   tutorialSeen: boolean;
@@ -45,6 +46,7 @@ export type GameEventMap = {
   place: { instance: BrainrotInstance; padId: number };
   swap: { firstId: string; secondId: string };
   merge: { result: BrainrotInstance; padId: number };
+  rosterexpand: { unlockedPads: number };
   discover: { instance: BrainrotInstance; total: number };
   income: { amount: number; padId: number };
   message: { title: string; detail?: string; tone?: "pink" | "gold" | "rainbow" };

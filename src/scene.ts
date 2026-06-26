@@ -8,6 +8,7 @@ type CharacterNode = {
   group: THREE.Group;
   sprite: THREE.Sprite;
   shadow: THREE.Sprite;
+  aura: THREE.Sprite[];
   instance: BrainrotInstance;
   walkProgress: number;
   phase: number;
@@ -27,8 +28,10 @@ export class ParadeScene {
   private textures = new Map<number, THREE.Texture>();
   private nodes = new Map<string, CharacterNode>();
   private pads: THREE.Mesh[] = [];
+  private padCenters: THREE.Mesh[] = [];
   private padHalos: THREE.Mesh[] = [];
   private particles: THREE.Sprite[] = [];
+  private emojiTextures = new Map<string, THREE.CanvasTexture>();
   private draggedId: string | null = null;
   private dragOffset = new THREE.Vector3();
   private animationFrame = 0;
@@ -107,6 +110,13 @@ export class ParadeScene {
       this.burst(position.x, position.y + 0.2, RARITIES.rainbow.css, 20);
       this.cameraKick = this.state.settings.reducedMotion ? 0 : 0.16;
     });
+    this.bus.on("rosterexpand", ({ unlockedPads }) => {
+      const firstNewPad = Math.max(0, unlockedPads - 2);
+      for (let id = firstNewPad; id < unlockedPads; id += 1) {
+        const position = PAD_POSITIONS[id];
+        this.burst(position.x, position.y, "#9dffea", 10);
+      }
+    });
     this.bus.on("discover", ({ instance }) => {
       const color = RARITIES[instance.rarity].css;
       this.burst(0, 0.2, color, 12);
@@ -143,6 +153,7 @@ export class ParadeScene {
       center.scale.y = 0.35;
       center.renderOrder = 2;
       this.scene.add(center);
+      this.padCenters.push(center);
 
       const halo = new THREE.Mesh(
         new THREE.RingGeometry(0.68, 0.84, 48),
@@ -163,6 +174,7 @@ export class ParadeScene {
   }
 
   private syncState(state: GameState): void {
+    this.layoutPads(state.unlockedPads);
     const currentIds = new Set(state.instances.map((instance) => instance.id));
     for (const [id, node] of this.nodes) {
       if (!currentIds.has(id)) {
@@ -184,9 +196,9 @@ export class ParadeScene {
       if (instance.status === "placed" && instance.padId !== null && this.draggedId !== instance.id) {
         const position = PAD_POSITIONS[instance.padId];
         node.group.position.x = position.x;
-        node.group.position.y = position.y + 0.25;
+        node.group.position.y = position.y + this.placedYOffset();
         node.group.position.z = 0.25;
-        node.group.scale.setScalar(0.9);
+        node.group.scale.setScalar(this.placedScale());
       }
     });
   }
@@ -222,10 +234,25 @@ export class ParadeScene {
     sprite.renderOrder = 5;
     group.add(sprite);
 
+    const aura = Array.from({ length: 3 }, (_, auraIndex) => {
+      const auraSprite = new THREE.Sprite(new THREE.SpriteMaterial({
+        transparent: true,
+        depthWrite: false,
+      }));
+      auraSprite.scale.setScalar(0.36);
+      auraSprite.position.z = 0.08;
+      auraSprite.userData.auraIndex = auraIndex;
+      auraSprite.renderOrder = 7;
+      auraSprite.visible = false;
+      group.add(auraSprite);
+      return auraSprite;
+    });
+
     return {
       group,
       sprite,
       shadow,
+      aura,
       instance,
       walkProgress: 0,
       phase: Math.random() * Math.PI * 2,
@@ -236,8 +263,71 @@ export class ParadeScene {
     const material = node.sprite.material;
     material.color.setHex(RARITIES[rarity].color);
     material.opacity = 1;
-    if (rarity === "neon") material.color.offsetHSL(0.05, 0.25, 0.08);
+    if (rarity === "bubblegum") material.color.offsetHSL(-0.04, 0.18, 0.08);
+    if (rarity === "neon") material.color.offsetHSL(0.05, 0.3, 0.12);
+    if (rarity === "ocean") material.color.offsetHSL(0.08, 0.22, -0.02);
     node.sprite.userData.rarity = rarity;
+    const emoji = RARITIES[rarity].emoji;
+    node.aura.forEach((aura) => {
+      const auraMaterial = aura.material as THREE.SpriteMaterial;
+      auraMaterial.map = emoji ? this.getEmojiTexture(emoji, RARITIES[rarity].css) : null;
+      auraMaterial.needsUpdate = true;
+      aura.visible = Boolean(emoji) && node.instance.status === "placed";
+    });
+  }
+
+  private layoutPads(unlockedPads: number): void {
+    const compact = unlockedPads > 6;
+    this.pads.forEach((pad, id) => {
+      const visible = id < unlockedPads;
+      const size = compact ? 0.78 : 1;
+      pad.visible = visible;
+      this.padCenters[id].visible = visible;
+      this.padHalos[id].visible = visible;
+      pad.scale.set(size, 0.35 * size, 1);
+      this.padCenters[id].scale.set(size, 0.35 * size, 1);
+      if ((this.padHalos[id].material as THREE.MeshBasicMaterial).opacity === 0) {
+        this.padHalos[id].scale.set(size, 0.35 * size, 1);
+      }
+    });
+  }
+
+  private placedScale(): number {
+    if (this.state.unlockedPads >= 11) return 0.52;
+    if (this.state.unlockedPads > 6) return 0.62;
+    return 0.9;
+  }
+
+  private placedYOffset(): number {
+    return this.state.unlockedPads > 6 ? 0.17 : 0.25;
+  }
+
+  private getEmojiTexture(emoji: string, color: string): THREE.CanvasTexture {
+    const key = `${emoji}:${color}`;
+    const cached = this.emojiTextures.get(key);
+    if (cached) return cached;
+    const canvas = document.createElement("canvas");
+    canvas.width = 128;
+    canvas.height = 128;
+    const context = canvas.getContext("2d")!;
+    context.beginPath();
+    context.arc(64, 64, 46, 0, Math.PI * 2);
+    context.fillStyle = `${color}cc`;
+    context.shadowColor = "#ffffff";
+    context.shadowBlur = 16;
+    context.fill();
+    context.lineWidth = 7;
+    context.strokeStyle = "#ffffff";
+    context.stroke();
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.font = "64px Apple Color Emoji, Segoe UI Emoji, sans-serif";
+    context.shadowBlur = 0;
+    context.fillText(emoji, 64, 68);
+    const texture = new THREE.CanvasTexture(canvas);
+    texture.colorSpace = THREE.SRGBColorSpace;
+    this.emojiTextures.set(key, texture);
+    return texture;
   }
 
   private createShadowTexture(): THREE.CanvasTexture {
@@ -311,7 +401,7 @@ export class ParadeScene {
 
     let closestPad = -1;
     let closestDistance = Number.POSITIVE_INFINITY;
-    PAD_POSITIONS.forEach((position, index) => {
+    PAD_POSITIONS.slice(0, this.state.unlockedPads).forEach((position, index) => {
       const distance = Math.hypot(node.group.position.x - position.x, node.group.position.y - (position.y + 0.25));
       if (distance < closestDistance) {
         closestDistance = distance;
@@ -339,7 +429,7 @@ export class ParadeScene {
     this.padHalos.forEach((halo, id) => {
       const occupantId = this.state.pads[id]?.occupantId;
       const occupant = occupantId ? this.state.instances.find((item) => item.id === occupantId) : null;
-      const isMerge = occupant?.type === instance.type && occupant.rarity === instance.rarity;
+      const isMerge = occupant?.type === instance.type;
       const material = halo.material as THREE.MeshBasicMaterial;
       material.color.set(isMerge ? 0xffff55 : 0x8fffff);
       material.opacity = 0.9;
@@ -429,17 +519,30 @@ export class ParadeScene {
       } else if (instance.status === "placed" && instance.padId !== null) {
         const position = PAD_POSITIONS[instance.padId];
         node.group.position.x = position.x + (reduce ? 0 : Math.sin(seconds * 2.7 + node.phase) * 0.04);
-        node.group.position.y = position.y + 0.25 + (reduce ? 0 : Math.abs(Math.sin(seconds * 3.5 + node.phase)) * 0.06);
+        node.group.position.y = position.y + this.placedYOffset() + (reduce ? 0 : Math.abs(Math.sin(seconds * 3.5 + node.phase)) * 0.06);
         node.group.rotation.z = reduce ? 0 : Math.sin(seconds * 2.7 + node.phase) * 0.045;
-        node.group.scale.setScalar(0.9);
+        node.group.scale.setScalar(this.placedScale());
       }
 
       if (instance.rarity === "rainbow") {
         (node.sprite.material as THREE.SpriteMaterial).color.setHSL((seconds * 0.13 + node.phase) % 1, 0.65, 0.72);
       }
+      if (instance.rarity === "cosmic") {
+        (node.sprite.material as THREE.SpriteMaterial).color.setHSL((0.72 + Math.sin(seconds * 0.8 + node.phase) * 0.08) % 1, 0.7, 0.66);
+      }
       if (instance.rarity === "golden" && Math.random() < delta * 1.5) {
         this.burst(node.group.position.x, node.group.position.y + 0.35, "#ffd94a", 1);
       }
+      node.aura.forEach((aura, auraIndex) => {
+        aura.visible = Boolean(RARITIES[instance.rarity].emoji) && instance.status === "placed";
+        if (!aura.visible) return;
+        const orbit = seconds * (0.55 + auraIndex * 0.08) + node.phase + auraIndex * 2.1;
+        aura.position.x = Math.cos(orbit) * (0.72 + auraIndex * 0.04);
+        aura.position.y = 0.1 + ((seconds * (0.28 + auraIndex * 0.04) + auraIndex * 0.31) % 1.25);
+        const auraMaterial = aura.material as THREE.SpriteMaterial;
+        auraMaterial.opacity = 0.72 + Math.sin(orbit * 2) * 0.2;
+        aura.scale.setScalar(0.5 + auraIndex * 0.06);
+      });
     }
 
     this.particles = this.particles.filter((particle) => {
